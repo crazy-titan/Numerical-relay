@@ -1,0 +1,54 @@
+[
+    { "id": "legacy_flow", "type": "tab", "label": "Smart Hub V3" },
+    { "id": "ui_tab_id", "type": "ui_tab", "name": "Control Room", "icon": "dashboard" },
+    { "id": "ui_group_id", "type": "ui_group", "name": "REAL-TIME RELAY STATUS", "tab": "ui_tab_id", "disp": true, "width": "6" },
+    {
+        "id": "mqtt_in", "type": "mqtt in", "z": "legacy_flow", "name": "SmartHub Telemetry",
+        "topic": "smarthub/telemetry", "qos": "0", "datatype": "json", "broker": "broker_config",
+        "x": 100, "y": 80, "wires": [["json_parse"]]
+    },
+    {
+        "id": "json_parse", "type": "function", "z": "legacy_flow", "name": "Data Splitter",
+        "func": "var cur = msg.payload.current_A;\nvar st = msg.payload.state;\nvar m1 = { payload: cur };\nvar m2 = { payload: st };\nvar m3 = { payload: cur, topic: 'Amps' };\nvar m4 = { payload: 0.55, topic: 'Trip Limit' };\nreturn [m1, m2, m3, m4];",
+        "outputs": 4, "x": 280, "y": 80, "wires": [["legacy_gauge"], ["legacy_status"], ["legacy_chart"], ["legacy_chart"]]
+    },
+    {
+        "id": "legacy_gauge", "type": "ui_gauge", "z": "legacy_flow", "name": "Motor Current", "group": "ui_group_id",
+        "order": 1, "width": 6, "height": 4, "gtype": "gage", "title": "LOAD CURRENT", "label": "A",
+        "format": "{{value}}", "min": 0, "max": 2, "colors": ["#0ea5e9","#eab308","#ef4444"],
+        "seg1": "0.55", "seg2": "1.0", "x": 480, "y": 60, "wires": []
+    },
+    {
+        "id": "legacy_status", "type": "ui_text", "z": "legacy_flow", "name": "State", "group": "ui_group_id",
+        "order": 2, "width": 6, "height": 1, "label": "SGP STATE:", "format": "{{msg.payload}}",
+        "x": 480, "y": 100, "wires": []
+    },
+    {
+        "id": "legacy_reset", "type": "ui_button", "z": "legacy_flow", "name": "Remote Reset", "group": "ui_group_id",
+        "order": 3, "width": 6, "height": 1, "label": "EXECUTE RESET", "color": "#ffffff", "bgcolor": "#ef4444",
+        "icon": "refresh", "payload": "RESET", "topic": "smarthub/command/reset",
+        "x": 100, "y": 200, "wires": [["mqtt_out"]]
+    },
+    {
+        "id": "legacy_chart", "type": "ui_chart", "z": "legacy_flow", "name": "Graph", "group": "ui_group_id",
+        "order": 4, "width": 6, "height": 4, "label": "Industrial Monitor", "chartType": "line",
+        "legend": "true", "ymin": "0", "ymax": "1.2", "removeOlder": "5", "removeOlderUnit": "60",
+        "colors": ["#38bdf8","#ef4444","#ffbf00"], "x": 480, "y": 160, "wires": [[]]
+    },
+    {
+        "id": "mqtt_out", "type": "mqtt out", "z": "legacy_flow", "name": "Command Hub", "topic": "smarthub/command/reset",
+        "qos": "0", "broker": "broker_config", "x": 300, "y": 200, "wires": []
+    },
+    {
+        "id": "mqtt_feedback", "type": "mqtt in", "z": "legacy_flow", "name": "Relay Feedback", "topic": "smarthub/feedback",
+        "qos": "0", "broker": "broker_config", "x": 100, "y": 280, "wires": [["toast_notify"]]
+    },
+    {
+        "id": "toast_notify", "type": "ui_toast", "z": "legacy_flow", "name": "Popup Alert", "group": "ui_group_id",
+        "displayTime": "5", "highlight": "#ef4444", "x": 300, "y": 280, "wires": []
+    },
+    {
+        "id": "broker_config", "type": "mqtt-broker", "name": "Local Broker", "broker": "mosquitto",
+        "port": "1883", "credentials": { "user": "admin", "password": "admin123" }
+    }
+]
